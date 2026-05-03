@@ -9,7 +9,7 @@ npm install
 npm start
 ```
 
-Открой **http://localhost:3005**
+Сайт доступен по ссылке: **http://localhost:3005**
 
 ## ✨ Что делает
 
