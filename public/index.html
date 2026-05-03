@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>🖼️ Image Search</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font: 15px -apple-system, system-ui, sans-serif; background: #18181b; color: #fafafa; min-height: 100vh; }
+    header { padding: 20px; background: #27272a; border-bottom: 1px solid #3f3f46; }
+    .container { max-width: 1280px; margin: 0 auto; padding: 0 20px; }
+    h1 { font-size: 24px; margin-bottom: 14px; }
+    .search-row { display: flex; gap: 10px; }
+    input { flex: 1; padding: 12px 16px; border: 1px solid #52525b; border-radius: 8px; background: #18181b; color: white; font: inherit; outline: none; }
+    button { padding: 12px 24px; border: 0; border-radius: 8px; background: #6366f1; color: white; font-weight: 600; cursor: pointer; font: inherit; }
+    .genres { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .genres button { padding: 6px 14px; background: #3f3f46; font-size: 13px; }
+    .genres button.active { background: #6366f1; }
+    main { padding: 20px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+    .card { background: #27272a; border-radius: 8px; overflow: hidden; cursor: pointer; transition: transform 0.2s; }
+    .card:hover { transform: translateY(-2px); }
+    .card img { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; }
+    .card .meta { padding: 10px; font-size: 12px; }
+    .card .author { color: #a1a1aa; }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display: grid; place-items: center; z-index: 100; padding: 20px; cursor: pointer; }
+    .modal img { max-width: 92vw; max-height: 80vh; border-radius: 6px; }
+    .modal .actions { position: absolute; bottom: 30px; display: flex; gap: 10px; }
+    .modal .actions a { background: white; color: black; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; }
+    .loading { text-align: center; padding: 40px; opacity: 0.6; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>🖼️ Image Search</h1>
+      <div class="search-row">
+        <input id="q" placeholder="Введите запрос (cat, business, nature...)" value="business" />
+        <button onclick="search(true)">Найти</button>
+      </div>
+      <div class="genres" id="genres"></div>
+    </div>
+  </header>
+  <main>
+    <div class="container">
+      <div id="grid" class="grid"></div>
+      <div id="more"></div>
+    </div>
+  </main>
+
+<script>
+const GENRES = ['business','nature','food','technology','people','animals','travel','architecture','sport','minimal'];
+const qEl = document.getElementById('q');
+const gridEl = document.getElementById('grid');
+const moreEl = document.getElementById('more');
+const genresEl = document.getElementById('genres');
+
+let page = 1;
+let currentQuery = '';
+
+genresEl.innerHTML = GENRES.map(g => `<button onclick="setGenre('${g}', this)">${g}</button>`).join('');
+qEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') search(true); });
+
+function setGenre(g, btn) {
+  document.querySelectorAll('.genres button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  qEl.value = g;
+  search(true);
+}
+
+async function search(reset = false) {
+  if (reset) { page = 1; currentQuery = qEl.value.trim(); gridEl.innerHTML = ''; }
+  if (!currentQuery) return;
+  moreEl.innerHTML = '<div class="loading">Загружаем...</div>';
+  try {
+    const r = await fetch(`/api/search?q=${encodeURIComponent(currentQuery)}&page=${page}`);
+    const data = await r.json();
+    if (data.error) { moreEl.innerHTML = `<div class="loading">⚠️ ${data.error}</div>`; return; }
+    for (const p of data.results) {
+      gridEl.insertAdjacentHTML('beforeend', `
+        <div class="card" onclick='openImage(${JSON.stringify(p).replace(/'/g, "&#39;")})'>
+          <img src="${p.url_small}" alt="${p.description}" loading="lazy" />
+          <div class="meta">
+            <div>${p.description.slice(0, 60) || '—'}</div>
+            <div class="author">📷 ${p.author}</div>
+          </div>
+        </div>
+      `);
+    }
+    page++;
+    if (data.results.length >= 20) {
+      moreEl.innerHTML = `<div style="text-align:center;padding:20px"><button onclick="search()">Загрузить ещё</button></div>`;
+    } else {
+      moreEl.innerHTML = '';
+    }
+  } catch (e) {
+    moreEl.innerHTML = `<div class="loading">⚠️ ${e.message}</div>`;
+  }
+}
+
+function openImage(p) {
+  document.body.insertAdjacentHTML('beforeend', `
+    <div class="modal" onclick="this.remove()">
+      <img src="${p.url_full}" alt="" />
+      <div class="actions" onclick="event.stopPropagation()">
+        <a href="${p.url_full}" download target="_blank">⬇ Скачать</a>
+        <a href="${p.author_link}" target="_blank">👤 Автор: ${p.author}</a>
+      </div>
+    </div>
+  `);
+}
+
+search(true);
+</script>
+</body>
+</html>
