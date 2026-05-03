@@ -1,11 +1,10 @@
-# 🖼️ EASY_05 — Image Search (Unsplash)
+# Image Search (Unsplash)
 
 Поиск картинок высокого качества из Unsplash. Бесконечная прокрутка, скачивание, поиск по жанрам.
 
 ## 🚀 Запуск
 
 ```bash
-cd EASY_05_Image_Search
 npm install
 npm start
 ```
